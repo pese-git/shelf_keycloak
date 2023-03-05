@@ -7,8 +7,15 @@ environment:
   sdk: '>=2.19.2 <3.0.0'
 
 dependencies:
+  corsac_jwt: ^1.0.0-nullsafety.1
+  dart_jsonwebtoken: ^2.7.1
+  logger: ^1.2.2
+  oauth2: ^2.0.1
+  openid_client: ^0.4.7
   shelf: ^1.4.0
 #   path: ^1.8.0
+  http: ^0.13.5
+  jose: ^0.3.3
 
 dev_dependencies:
   lints: ^2.0.0
