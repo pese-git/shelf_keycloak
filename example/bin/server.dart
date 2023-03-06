@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:args/args.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:logger/logger.dart';
@@ -6,24 +7,6 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_keycloak/shelf_keycloak.dart';
 import 'package:shelf_router/shelf_router.dart';
-
-const clientID = 'own-pub-server-backend';
-const clientSecret = '062WkWIsQz8TwEDaOYk9KwcdM8tT3VqU';
-const configURL =
-    'http://localhost:51510/realms/own-pub-server/.well-known/openid-configuration';
-const redirectURL = 'http://localhost:8080/callback';
-const scopes = ["openid", "profile", "email"];
-
-final authorizationEndpoint = Uri.parse(
-    'http://localhost:51510/realms/own-pub-server/protocol/openid-connect/auth');
-final tokenEndpoint = Uri.parse(
-    'http://localhost:51510/realms/own-pub-server/protocol/openid-connect/token');
-
-final redirectUrl = Uri.parse('http://localhost:8080');
-
-final issuer = 'http://localhost:51510/realms/own-pub-server';
-
-final credentialsFile = File('~/.myapp/credentials.json');
 
 // Configure routes.
 final _router = Router()
@@ -40,30 +23,49 @@ Response _echoHandler(Request request) {
 }
 
 void main(List<String> args) async {
-  // Use any available host or container IP (usually `0.0.0.0`).
-  final ip = InternetAddress.anyIPv4;
+  var parser = ArgParser();
+  parser.addOption('credentialsFile',
+      help:
+          '--credentialsFile - param for OpenConnect certificate config file');
+
+  parser.addOption('address',
+      mandatory: false, help: '--address -  listener <dns|ip>');
+  parser.addOption('port', mandatory: false, help: '--port -  listener <port>');
+  parser.addFlag('verbose', defaultsTo: false);
+
+  final result = parser.parse(args);
+
+  if (!result.wasParsed('credentialsFile')) {
+    print(parser.options['credentialsFile']?.help);
+    return;
+  }
+
+  print(result['verbose']); // true
 
   // Configure a pipeline that logs requests.
   final handler = Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(
-        createKeycloakMiddleware(
-          logger: Logger(),
+        checkJwtMiddleware(
+          logger: result['verbose'] == true ? Logger() : null,
           client: http.Client(),
-          //clientID: clientID,
-          //clientSecret: clientSecret,
-          configURL: Uri.parse(
-              'http://localhost:51510/realms/code-fort-realm/protocol/openid-connect/certs'),
-          kid: "X-cZn2Rk_wZ2Aoh_ESwUk2aalEe_WzQhB-oaQ27isfk",
-          //redirectURL: redirectURL,
-          //issuer: issuer,
-          //scopes: scopes,
+          credentialsFile: File(result['credentialsFile'] ??
+              Platform.environment['CREDENTIALS_FILE']),
         ),
       )
       .addHandler(_router);
 
+  // Use any available host or container IP (usually `0.0.0.0`).
+  final ip = InternetAddress.tryParse(result.wasParsed('address') == true
+          ? result['address']
+          : Platform.environment['ADDRESS']) ??
+      InternetAddress.anyIPv4;
+
   // For running in containers, we respect the PORT environment variable.
-  final port = int.parse(Platform.environment['PORT'] ?? '8080');
+
+  final port = int.parse(result.wasParsed('port') == true
+      ? result['port']
+      : Platform.environment['PORT']);
   final server = await serve(handler, ip, port);
   print('Server listening on port ${server.port}');
 }
