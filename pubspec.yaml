@@ -1,5 +1,5 @@
 name: shelf_keycloak
-description: A starting point for Dart libraries or applications.
+description: Keycloak middelware for shelf server.
 version: 0.1.0
 repository: https://github.com/pese-git/shelf_keycloak
 
