@@ -10,13 +10,13 @@ This sample code handles HTTP GET requests to `/` and `/echo/<message>`
 You can run the example with the [Dart SDK](https://dart.dev/get-dart)
 like this:
 
-```
+```sh
 $ dart run bin/server.dart
 Server listening on port 8080
 ```
 
 And then from a second terminal:
-```
+```sh
 $ curl http://0.0.0.0:8080
 Hello, World!
 $ curl http://0.0.0.0:8080/echo/I_love_Dart
@@ -28,14 +28,14 @@ I_love_Dart
 If you have [Docker Desktop](https://www.docker.com/get-started) installed, you
 can build and run with the `docker` command:
 
-```
+```sh
 $ docker build . -t myserver
 $ docker run -it -p 8080:8080 myserver
 Server listening on port 8080
 ```
 
 And then from a second terminal:
-```
+```sh
 $ curl http://0.0.0.0:8080
 Hello, World!
 $ curl http://0.0.0.0:8080/echo/I_love_Dart
