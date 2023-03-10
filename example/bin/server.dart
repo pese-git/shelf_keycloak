@@ -8,6 +8,8 @@ import 'package:shelf/shelf_io.dart';
 import 'package:shelf_keycloak/shelf_keycloak.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+var logger = Logger();
+
 // Configure routes.
 final _router = Router()
   ..get('/', _rootHandler)
@@ -23,6 +25,8 @@ Response _echoHandler(Request request) {
 }
 
 void main(List<String> args) async {
+  logger.i('Start example');
+
   var parser = ArgParser();
   parser.addOption('credentialsFile',
       help:
@@ -35,12 +39,7 @@ void main(List<String> args) async {
 
   final result = parser.parse(args);
 
-  if (!result.wasParsed('credentialsFile')) {
-    print(parser.options['credentialsFile']?.help);
-    return;
-  }
-
-  print(result['verbose']); // true
+  logger.i('Verbose: ${result['verbose']}'); // true
 
   // Configure a pipeline that logs requests.
   final handler = Pipeline()
@@ -49,8 +48,9 @@ void main(List<String> args) async {
         checkJwtMiddleware(
           logger: result['verbose'] == true ? Logger() : null,
           client: http.Client(),
-          credentialsFile: File(result['credentialsFile'] ??
-              Platform.environment['CREDENTIALS_FILE']),
+          credentialsFile: File(result.wasParsed('credentialsFile') == true
+              ? result['credentialsFile']
+              : getEnvironmentValue('CREDENTIALS_FILE') ?? ''),
         ),
       )
       .addHandler(_router);
@@ -58,14 +58,26 @@ void main(List<String> args) async {
   // Use any available host or container IP (usually `0.0.0.0`).
   final ip = InternetAddress.tryParse(result.wasParsed('address') == true
           ? result['address']
-          : Platform.environment['ADDRESS']) ??
+          : getEnvironmentValue('ADDRESS') ?? '') ??
       InternetAddress.anyIPv4;
 
   // For running in containers, we respect the PORT environment variable.
 
-  final port = int.parse(result.wasParsed('port') == true
+  final port = int.tryParse(result.wasParsed('port') == true
       ? result['port']
-      : Platform.environment['PORT']);
-  final server = await serve(handler, ip, port);
+      : getEnvironmentValue('PORT') ?? '');
+
+  logger.i('IP: ${ip.address}');
+  logger.i('PORT: ${port ?? 8080}');
+
+  final server = await serve(handler, ip, port ?? 8080);
   print('Server listening on port ${server.port}');
+}
+
+String? getEnvironmentValue(String key, [String? defaultValue]) {
+  try {
+    return Platform.environment[key];
+  } catch (e) {
+    return defaultValue;
+  }
 }
