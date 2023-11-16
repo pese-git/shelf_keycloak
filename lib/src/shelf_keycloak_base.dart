@@ -50,55 +50,56 @@ crit	Critical	A list of headers that must be understood by the server in order t
 Middleware checkJwtMiddleware({
   Logger? logger,
   http.Client? client,
-  required File credentialsFile,
-}) =>
-    (innerHandler) {
-      return (request) async {
-        final body = await credentialsFile.readAsString();
+  required Uri certsUri,
+}) {
+  return (innerHandler) {
+    return (request) async {
+      final certBody = await http.get(certsUri).then((value) => value.body);
 
-        logger?.d('Response config: $body');
+      logger?.d('Response config: $certBody');
 
-        final cert = jsonDecode(body);
+      final cert = jsonDecode(certBody);
 
-        final rawToken = request.headers['Authorization'];
-        logger?.d('Authorization: $rawToken');
+      final rawToken = request.headers['Authorization'];
+      logger?.d('Authorization: $rawToken');
 
-        if (rawToken == null) {
-          return Response(401, body: 'Empty token');
-        }
+      if (rawToken == null) {
+        return Response(401, body: 'Empty token');
+      }
 
-        if (!rawToken.startsWith('Bearer ')) {
-          return Response(401, body: 'Invalid presenter');
-        }
+      if (!rawToken.startsWith('Bearer ')) {
+        return Response(401, body: 'Invalid presenter');
+      }
 
-        final token = rawToken.replaceFirst('Bearer', '').trim();
+      final token = rawToken.replaceFirst('Bearer', '').trim();
 
-        if (token.isEmpty) {
-          return Response(401, body: 'Empty token');
-        }
-        // create a JsonWebSignature from the encoded string
-        var jws = JsonWebSignature.fromCompactSerialization(token);
+      if (token.isEmpty) {
+        return Response(401, body: 'Empty token');
+      }
+      // create a JsonWebSignature from the encoded string
+      var jws = JsonWebSignature.fromCompactSerialization(token);
 
-        // extract the payload
-        var payload = jws.unverifiedPayload;
+      // extract the payload
+      var payload = jws.unverifiedPayload;
 
-        logger?.d("content of jws: ${payload.stringContent}");
-        logger?.d("protected parameters: ${payload.protectedHeader?.toJson()}");
+      logger?.d("content of jws: ${payload.stringContent}");
+      logger?.d("protected parameters: ${payload.protectedHeader?.toJson()}");
 
-        // create a JsonWebKey for verifying the signature
-        var jwk = JsonWebKey.fromJson(cert);
-        var keyStore = JsonWebKeyStore()..addKey(jwk);
+      // create a JsonWebKey for verifying the signature
+      var jwk = JsonWebKey.fromJson(cert);
+      var keyStore = JsonWebKeyStore()..addKey(jwk);
 
-        // verify the signature
-        var verified = await jws.verify(keyStore);
-        logger?.d("signature verified: $verified");
+      // verify the signature
+      var verified = await jws.verify(keyStore);
+      logger?.d("signature verified: $verified");
 
-        if (verified == false) {
-          return Response(401, body: 'Invalid signature');
-        }
+      if (verified == false) {
+        return Response(401, body: 'Invalid signature');
+      }
 
-        return Future.sync(() => innerHandler(request)).then((response) {
-          return response;
-        });
-      };
+      return Future.sync(() => innerHandler(request)).then((response) {
+        return response;
+      });
     };
+  };
+}

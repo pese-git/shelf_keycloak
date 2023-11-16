@@ -28,10 +28,8 @@ void main(List<String> args) async {
   logger.i('Start example');
 
   var parser = ArgParser();
-  parser.addOption('credentialsFile',
-      help:
-          '--credentialsFile - param for OpenConnect certificate config file');
-
+  parser.addOption('certsUri',
+      help: '--certsUri - param for OpenConnect certsUri');
   parser.addOption('address',
       mandatory: false, help: '--address -  listener <dns|ip>');
   parser.addOption('port', mandatory: false, help: '--port -  listener <port>');
@@ -41,6 +39,10 @@ void main(List<String> args) async {
 
   logger.i('Verbose: ${result['verbose']}'); // true
 
+  final certsUri = result.wasParsed('certsUri') == true
+      ? Uri.parse(result['certsUri'])
+      : Uri.parse(getEnvironmentValue('CERTS_URI') ?? '');
+
   // Configure a pipeline that logs requests.
   final handler = Pipeline()
       .addMiddleware(logRequests())
@@ -48,9 +50,7 @@ void main(List<String> args) async {
         checkJwtMiddleware(
           logger: result['verbose'] == true ? Logger() : null,
           client: http.Client(),
-          credentialsFile: File(result.wasParsed('credentialsFile') == true
-              ? result['credentialsFile']
-              : getEnvironmentValue('CREDENTIALS_FILE') ?? ''),
+          certsUri: certsUri,
         ),
       )
       .addHandler(_router);
@@ -68,9 +68,10 @@ void main(List<String> args) async {
       : getEnvironmentValue('PORT') ?? '');
 
   logger.i('IP: ${ip.address}');
-  logger.i('PORT: ${port ?? 8080}');
+  logger.i('PORT: ${port ?? 9090}');
+  logger.i('CERTS URL: ${certsUri.toString()}');
 
-  final server = await serve(handler, ip, port ?? 8080);
+  final server = await serve(handler, ip, port ?? 9090);
   print('Server listening on port ${server.port}');
 }
 

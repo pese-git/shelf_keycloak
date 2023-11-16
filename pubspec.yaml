@@ -1,6 +1,6 @@
 name: shelf_keycloak
 description: Keycloak middelware for shelf server.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/pese-git/shelf_keycloak
 
 environment:
