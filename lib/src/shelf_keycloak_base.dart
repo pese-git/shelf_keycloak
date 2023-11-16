@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:jose/jose.dart';
 import 'package:logger/logger.dart';
 import 'package:shelf/shelf.dart';
@@ -81,12 +79,16 @@ Middleware checkJwtMiddleware({
 
       // extract the payload
       var payload = jws.unverifiedPayload;
+      var protectedHeader = payload.protectedHeader?.toJson() ?? {};
 
       logger?.d("content of jws: ${payload.stringContent}");
-      logger?.d("protected parameters: ${payload.protectedHeader?.toJson()}");
+      logger?.d("protected parameters: $protectedHeader");
+
+      final key = (cert['keys'] as List)
+          .firstWhere(((element) => element['kid'] == protectedHeader['kid']));
 
       // create a JsonWebKey for verifying the signature
-      var jwk = JsonWebKey.fromJson(cert);
+      var jwk = JsonWebKey.fromJson(key);
       var keyStore = JsonWebKeyStore()..addKey(jwk);
 
       // verify the signature
